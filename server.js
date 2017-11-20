@@ -3,35 +3,62 @@
 
 // init project
 var express = require('express');
+var qs = require('querystring');
 var app = express();
 
-// we've started you off with Express, 
-// but feel free to use whatever libs or frameworks you'd like through `package.json`.
+var months = ['January',
+              'February',
+              'March',
+              'April',
+              'May',
+              'June',
+              'July',
+              'August',
+              'September',
+              'October',
+              'November',
+              'December'];
 
-// http://expressjs.com/en/starter/static-files.html
 app.use(express.static('public'));
-
-// http://expressjs.com/en/starter/basic-routing.html
 app.get("/", function (request, response) {
   response.sendFile(__dirname + '/views/index.html');
 });
 
-app.get("/dreams", function (request, response) {
-  response.send(dreams);
+
+app.get("/*", function (req, res) {
+  var result = {unix: null,
+              natural: null};
+  var params = req.originalUrl.slice(1, req.originalUrl.length);
+  var paramsIsUnix = false;
+  var date = undefined;
+  // first check and try to get date from unix timestamp
+  if( params.length <= 12 ){
+   var regexUnix = new RegExp('\\d{'+ params.length +'}');
+    if (regexUnix.test(params)){
+      params = parseInt(params);
+      date = new Date(params * 1000);
+      paramsIsUnix = true;
+    }
+  }
+  //try to get date derectly from params string if its not unix timestamp
+  if(!paramsIsUnix){
+    params = qs.unescape(params);
+    date = new Date(params);
+  }
+  //if date object is valid fill result object
+  if( !isNaN( date.getDate())){
+    result.unix = date.getTime() / 1000;
+    result.natural = months[date.getMonth()] + ' ' +
+                             date.getDate() + ', ' +
+                             date.getFullYear();
+  }
+  
+  res.set('Content-Type', 'application/json; charset=utf-8');
+  res.end(JSON.stringify(result));
+  
 });
 
-// could also use the POST body instead of query string: http://expressjs.com/en/api.html#req.body
-app.post("/dreams", function (request, response) {
-  dreams.push(request.query.dream);
-  response.sendStatus(200);
-});
 
-// Simple in-memory store for now
-var dreams = [
-  "Find and count some sheep",
-  "Climb a really tall mountain",
-  "Wash the dishes"
-];
 
 // listen for requests :)
 var listener = app.listen(process.env.PORT, function () {
